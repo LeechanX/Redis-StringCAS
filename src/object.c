@@ -37,8 +37,8 @@
 #endif
 
 #define CAS_BUFF_LEN (sizeof (uint64_t) + 2)
-#define CAS_BOUND_BEGIN 6
-#define CAS_BOUND_END 21
+#define CAS_BOUND_BEGIN 6 //`\x06`
+#define CAS_BOUND_END 21 //`\x15`
 
 int tryObjectEncodeCAS(robj *o, const uint64_t * const u_version)
 {

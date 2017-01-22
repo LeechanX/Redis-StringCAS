@@ -371,11 +371,12 @@ void delcasCommand(client *c) {
         }
 
         uint64_t u_version;
-        if (!version || getLongLongFromObjectOrReply(c, version, (long long *)&u_version, NULL) != C_OK)
+        if (!version)
         {
             addReplyError(c, "invalid argv version");
             return ;
         }
+        if (getLongLongFromObjectOrReply(c, version, (long long *)&u_version, NULL) != C_OK) return ;
 
         uint64_t old_u_version = 0;
         if (tryObjectDecodeCAS(o, &old_u_version))
@@ -385,7 +386,7 @@ void delcasCommand(client *c) {
         }
         if (u_version != old_u_version)
         {
-            addReplyErrorFormat(c, "value's cas version = %llu", old_u_version);
+            addReplyErrorFormat(c, "value's cas version = %llu, your version = %llu", old_u_version, u_version);
             return ;
         }
         //could delete.

@@ -133,13 +133,12 @@ int getcasGenericCommand(client *c, robj *key) {
 
 void setcasGenericCommand(client *c, robj *key, robj *value, robj *version) {
     uint64_t u_version;
-    if (version) {
-        if (getLongLongFromObjectOrReply(c, version, (long long *)&u_version, NULL) != C_OK)
-        {
-            addReplyError(c, "invalid argv version");
-            return ;
-        }
+    if (!version)
+    {
+        addReplyError(c, "invalid argv version");
+        return ;
     }
+    if (getLongLongFromObjectOrReply(c, version, (long long *)&u_version, NULL) != C_OK) return ;
     uint64_t old_u_version;
     uint64_t new_u_version;
     robj *o = lookupKeyRead(c->db, key);
