@@ -92,6 +92,93 @@ void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire,
     addReply(c, ok_reply ? ok_reply : shared.ok);
 }
 
+int getcasGenericCommand(client *c, robj *key) {
+    robj *o = lookupKeyRead(c->db, key);
+    if (o)
+    {
+        if (o->type != OBJ_STRING)
+        {
+            addReply(c,shared.wrongtypeerr);
+            return C_ERR;
+        }
+        uint64_t version = 0;
+        if (tryObjectDecodeCAS(o, &version))
+        {
+            addReplyError(c, "value is not cas format");
+            return C_ERR;
+        }
+        //get real string and len
+        size_t str_len;
+        char *str = tryObjectGetRealValueCAS(o, &str_len);
+        if (!str)
+        {
+            addReplyError(c, "value is not cas format");
+            return C_ERR;
+        }
+        //response version and a value
+        addReplyMultiBulkLen(c, 2);
+        addReplyLongLong(c, version);
+        //client *c, const char *s, size_t len
+        addReplyBulkCBuffer(c, str, str_len);
+    }
+    else
+    {
+        //response version = 0 and a nil number
+        addReplyMultiBulkLen(c, 2);
+        addReply(c, shared.czero);
+        addReply(c, shared.nullbulk);
+    }
+    return C_OK;
+}
+
+void setcasGenericCommand(client *c, robj *key, robj *value, robj *version) {
+    uint64_t u_version;
+    if (version) {
+        if (getLongLongFromObjectOrReply(c, version, (long long *)&u_version, NULL) != C_OK)
+        {
+            addReplyError(c, "invalid argv version");
+            return ;
+        }
+    }
+    uint64_t old_u_version;
+    uint64_t new_u_version;
+    robj *o = lookupKeyRead(c->db, key);
+    if (o)
+    {
+        //get o's version
+        if (tryObjectDecodeCAS(o, &old_u_version))
+        {
+            addReplyError(c, "value is exist but is not cas");
+            return ;
+        }
+        //if o's version != u_version
+        if (u_version != old_u_version)
+        {
+            addReplyErrorFormat(c, "value's cas version = %llu", old_u_version);
+            return ;
+        }
+        //do we need to free old value?
+    }
+    else if (u_version)
+    {
+        //when setcas firstly, must version = 0
+        //otherwise, i getcas, you delete, i setcas will be fucked up
+        addReplyError(c, "value is not exist so your version must = 0");
+        return ;
+    }
+    //encode new version to value
+    new_u_version = ustime();
+    if (tryObjectEncodeCAS(value, &new_u_version))
+    {
+        addReplyError(c, "encode cas error");
+        return ;
+    }
+    setKey(c->db, key, value);
+    server.dirty++;
+    notifyKeyspaceEvent(NOTIFY_STRING, "set", key,c->db->id);//??????
+    addReply(c, shared.ok);
+}
+
 /* SET key value [NX] [XX] [EX <seconds>] [PX <milliseconds>] */
 void setCommand(client *c) {
     int j;
@@ -137,6 +224,15 @@ void setCommand(client *c) {
 
     c->argv[2] = tryObjectEncoding(c->argv[2]);
     setGenericCommand(c,flags,c->argv[1],c->argv[2],expire,unit,NULL,NULL);
+}
+
+void getcasCommand(client *c) {
+    getcasGenericCommand(c, c->argv[1]);
+}
+
+void setcasCommand(client *c) {
+    c->argv[2] = tryObjectStringTypeRasingEncoding(c->argv[2]);
+    setcasGenericCommand(c, c->argv[1], c->argv[2], c->argv[3]);
 }
 
 void setnxCommand(client *c) {

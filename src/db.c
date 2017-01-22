@@ -357,6 +357,48 @@ void delCommand(client *c) {
     addReplyLongLong(c,deleted);
 }
 
+void delcasCommand(client *c) {
+    robj *key = c->argv[1];
+    robj *version = c->argv[2];
+    int deleted = 0;
+    robj *o = lookupKeyRead(c->db, key);
+    if (o)
+    {
+        if (o->type != OBJ_STRING)
+        {
+            addReply(c,shared.wrongtypeerr);
+            return ;
+        }
+
+        uint64_t u_version;
+        if (!version || getLongLongFromObjectOrReply(c, version, (long long *)&u_version, NULL) != C_OK)
+        {
+            addReplyError(c, "invalid argv version");
+            return ;
+        }
+
+        uint64_t old_u_version = 0;
+        if (tryObjectDecodeCAS(o, &old_u_version))
+        {
+            addReplyError(c, "value is not cas format");
+            return ;
+        }
+        if (u_version != old_u_version)
+        {
+            addReplyErrorFormat(c, "value's cas version = %llu", old_u_version);
+            return ;
+        }
+        //could delete.
+        if (dbDelete(c->db, key)) {
+            signalModifiedKey(c->db, key);
+            notifyKeyspaceEvent(NOTIFY_GENERIC, "del", key, c->db->id);//??????
+            server.dirty++;
+            deleted++;
+        }
+    }
+    addReplyLongLong(c, deleted);
+}
+
 /* EXISTS key1 key2 ... key_N.
  * Return value is the number of keys existing. */
 void existsCommand(client *c) {
