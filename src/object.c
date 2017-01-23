@@ -69,10 +69,10 @@ int tryObjectDecodeCAS(robj *o, uint64_t * const u_version)
 {
     if (!o || !o->ptr || !u_version)
         return 1;
-    if (o->type != OBJ_STRING || o->encoding != OBJ_ENCODING_RAW)
+    if (o->type != OBJ_STRING || (o->encoding != OBJ_ENCODING_RAW && o->encoding != OBJ_ENCODING_EMBSTR))
     {
         //don't need free???yes
-        serverLog(LL_WARNING, "AXIBA not support cas for EMBSTR / INT!");
+        serverLog(LL_WARNING, "not support cas for OBJ_ENCODING_INT!");
         return 1;
     }
     size_t total_len = sdslen(o->ptr);
@@ -82,7 +82,7 @@ int tryObjectDecodeCAS(robj *o, uint64_t * const u_version)
         buf[total_len - CAS_BUFF_LEN] != CAS_BOUND_BEGIN || 
         buf[total_len - 1] != CAS_BOUND_END)
     {
-        serverLog(LL_WARNING, "AXIBA not a valid cas format!");
+        serverLog(LL_WARNING, "not a valid cas format!");
         return 1;
     }
     *u_version = *((uint64_t *)(buf + total_len - CAS_BUFF_LEN + 1));
