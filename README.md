@@ -7,7 +7,7 @@ Specifically, the API includes:
 - setcas 
 - delcas
 
-###FEATURE:
+###PLAN LIST:
 - 对String类型的KV支持CAS操作 `DONE`
 - 兼容RDB持久化 `DONE`
 - 兼容AOF持久化 `DONE`
