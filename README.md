@@ -13,7 +13,6 @@ Specifically, the API includes:
 - 兼容AOF持久化 `DONE`
 - 支持主从复制 `DONE`
 - 兼容集群模式 `TODO`
-- 兼容发布订阅 `TODO`
 
 ###USAGE：
 ####getcas
@@ -118,5 +117,5 @@ return version and value
 - ~~AOF加载完成后，cas数据的版本号不对，且cas数据里有了不止一个版本 `FIXED`~~（原因：AOF文件中的setcas key value version与当时执行这条命令不一样，value已经是执行命令成功后的value了！即`value+版本`，故直接set key value即可，`version`参数没用了）
 
 ###PROBLEM
-- delcas在出错情况下是应该返回错误原因，or 直接返回0
-- del、get、set都可以直接操作CAS格式的kv，是否要限制一下
+- ~~delcas在出错情况下是应该返回错误原因，or 直接返回0~~，最终选择了直接返回0
+- ~~del、get、set都可以直接操作CAS格式的kv，是否要限制一下~~，算了
