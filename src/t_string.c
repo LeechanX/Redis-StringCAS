@@ -186,7 +186,7 @@ void setcasGenericCommand(client *c, robj *key, robj *value, robj *version) {
     }
     setKey(c->db, key, value);
     server.dirty++;
-    notifyKeyspaceEvent(NOTIFY_STRING, "set", key,c->db->id);//??????
+    notifyKeyspaceEvent(NOTIFY_STRING, "set", key,c->db->id);
     addReply(c, shared.ok);
 }
 

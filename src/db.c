@@ -361,6 +361,7 @@ void delcasCommand(client *c) {
     robj *key = c->argv[1];
     robj *version = c->argv[2];
     int deleted = 0;
+    int error = 0;
     int need_compare = 1;
     if (c->fd == -1 || (server.masterhost && (c->flags & CLIENT_MASTER)))
     {
@@ -374,36 +375,31 @@ void delcasCommand(client *c) {
     {
         if (need_compare)
         {
-            if (o->type != OBJ_STRING)
+            uint64_t u_version;
+            if (o->type != OBJ_STRING || !version)
             {
-                addReply(c,shared.wrongtypeerr);
-                return ;
+                //type error or invalid argv version
+                error = 1;
             }
 
-            uint64_t u_version;
-            if (!version)
-            {
-                addReplyError(c, "invalid argv version");//if need print error?
-                return ;
-            }
-            if (getLongLongFromObjectOrReply(c, version, (long long *)&u_version, NULL) != C_OK) return ;
+            if (!error && getLongLongFromObjectOrReply(c, version, (long long *)&u_version, NULL) != C_OK) return ;
 
             uint64_t old_u_version = 0;
-            if (tryObjectDecodeCAS(o, &old_u_version))
+            if (!error && tryObjectDecodeCAS(o, &old_u_version))
             {
-                addReplyError(c, "value is not cas format");
-                return ;
+                //value is not cas format
+                error = 1;
             }
-            if (u_version != old_u_version)
+            if (!error && u_version != old_u_version)
             {
-                addReplyErrorFormat(c, "value's cas version = %lu", old_u_version);
-                return ;
+                //value's cas version not equal
+                error = 1;
             }
         }
         //could delete.
-        if (dbDelete(c->db, key)) {
+        if (!error && dbDelete(c->db, key)) {
             signalModifiedKey(c->db, key);
-            notifyKeyspaceEvent(NOTIFY_GENERIC, "del", key, c->db->id);//??????
+            notifyKeyspaceEvent(NOTIFY_GENERIC, "del", key, c->db->id);
             server.dirty++;
             deleted++;
         }
