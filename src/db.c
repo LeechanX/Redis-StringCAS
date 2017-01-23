@@ -362,11 +362,11 @@ void delcasCommand(client *c) {
     robj *version = c->argv[2];
     int deleted = 0;
     int need_compare = 1;
-    if (c->fd == -1)
+    if (c->fd == -1 || (server.masterhost && (c->flags & CLIENT_MASTER)))
     {
-        //this setcas command is from AOF, don't need to compare version, just set it!
-        //now, value already = value+version
-        //so, just set directly!
+        //"c->fd == -1" suggest that setcas command is from AOF
+        //"c->flags & REDIS_SLAVE" suggest that setcas command is from master (p)sync
+        //because it's value already = value+version, so just set directly!
         need_compare = 0;
     }
     robj *o = lookupKeyRead(c->db, key);

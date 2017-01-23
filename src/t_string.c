@@ -142,11 +142,12 @@ void setcasGenericCommand(client *c, robj *key, robj *value, robj *version) {
     uint64_t old_u_version;
     uint64_t new_u_version;
     int need_compare = 1;
-    if (c->fd == -1)
+    if (c->fd == -1 || (server.masterhost && (c->flags & CLIENT_MASTER)))
     {
-        //this setcas command is from AOF, don't need to compare version, just set it!
-        //now, value already = value+version
-        //so, just set directly!
+        //"c->fd == -1" suggest that setcas command is from AOF
+        //"server.masterhost != NULL" suggest that i'm a slave of other server = masterhost
+        //"c->flags & CLIENT_MASTER" suggest that client is MASTER, or say: setcas command is from master (p)sync
+        //when command is from AOF/MASTER sync, it's value already = value+version, so just set directly!
         need_compare = 0;
     }
     if (need_compare)
