@@ -141,36 +141,47 @@ void setcasGenericCommand(client *c, robj *key, robj *value, robj *version) {
     if (getLongLongFromObjectOrReply(c, version, (long long *)&u_version, NULL) != C_OK) return ;
     uint64_t old_u_version;
     uint64_t new_u_version;
-    robj *o = lookupKeyRead(c->db, key);
-    if (o)
+    int need_compare = 1;
+    if (c->fd == -1)
     {
-        //get o's version
-        if (tryObjectDecodeCAS(o, &old_u_version))
+        //this setcas command is from AOF, don't need to compare version, just set it!
+        //now, value already = value+version
+        //so, just set directly!
+        need_compare = 0;
+    }
+    if (need_compare)
+    {
+        robj *o = lookupKeyRead(c->db, key);
+        if (o)
         {
-            addReplyError(c, "value is exist but is not cas");
+            //get o's version
+            if (tryObjectDecodeCAS(o, &old_u_version))
+            {
+                addReplyError(c, "value is exist but is not cas");
+                return ;
+            }
+            //if o's version != u_version
+            if (u_version != old_u_version)
+            {
+                addReplyErrorFormat(c, "value's cas version = %lu", old_u_version);
+                return ;
+            }
+            //do we need to free old value?
+        }
+        else if (u_version)
+        {
+            //when setcas firstly, must version = 0
+            //otherwise, i getcas, you delete, i setcas will be fucked up
+            addReplyError(c, "value is not exist so your version must = 0");
             return ;
         }
-        //if o's version != u_version
-        if (u_version != old_u_version)
+        //encode new version to value
+        new_u_version = ustime();
+        if (tryObjectEncodeCAS(value, &new_u_version))
         {
-            addReplyErrorFormat(c, "value's cas version = %llu", old_u_version);
+            addReplyError(c, "encode cas error");
             return ;
         }
-        //do we need to free old value?
-    }
-    else if (u_version)
-    {
-        //when setcas firstly, must version = 0
-        //otherwise, i getcas, you delete, i setcas will be fucked up
-        addReplyError(c, "value is not exist so your version must = 0");
-        return ;
-    }
-    //encode new version to value
-    new_u_version = ustime();
-    if (tryObjectEncodeCAS(value, &new_u_version))
-    {
-        addReplyError(c, "encode cas error");
-        return ;
     }
     setKey(c->db, key, value);
     server.dirty++;

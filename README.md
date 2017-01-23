@@ -28,6 +28,26 @@ if key is exist, version must = cas version in key storage, otherwise setcas wil
 >delcas key
 return version and value
 ```
+
+##测试
+
+###测试日记2 2017.01.23
+
+>开发进度：CAS支持AOF持久化；AOF文件加载时，`setcas key value version`中的`value`已经是当时该命令执行完成后的实际value，即`value+版本`，故直接set key value即可，`version`参数没用了
+>
+>测试目的：AOF数据恢复后cas格式数据一切正常
+
+
+####测试详情：
+开启Redis的AOF功能：
+
+- setcas一个kv多次，重启server后查看这个kv是否和重启前一致，且是否可以正常CAS操作 `PASS`
+- delcas一个kv，重启server后查看这个kv是否被删除了 `PASS`
+- setcas一个kv多次，delcas一个kv，重启server后查看这个kv是否被删除了 `PASS`
+
+- setcas一个kv多次，执行AOF重写，重启server后查看这个kv是否和重启前一致，且是否可以正常CAS操作 `PASS`
+- setcas一个kv多次，delcas一个kv，执行AOF重写，重启server后查看这个kv是否被删除了 `PASS`
+
 ###测试日记 2017.01.23
 
 >开发进度：修复:RDB恢复数据后无法GETCAS、SETCAS、DELCAS

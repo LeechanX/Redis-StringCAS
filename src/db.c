@@ -361,33 +361,44 @@ void delcasCommand(client *c) {
     robj *key = c->argv[1];
     robj *version = c->argv[2];
     int deleted = 0;
+    int need_compare = 1;
+    if (c->fd == -1)
+    {
+        //this setcas command is from AOF, don't need to compare version, just set it!
+        //now, value already = value+version
+        //so, just set directly!
+        need_compare = 0;
+    }
     robj *o = lookupKeyRead(c->db, key);
     if (o)
     {
-        if (o->type != OBJ_STRING)
+        if (need_compare)
         {
-            addReply(c,shared.wrongtypeerr);
-            return ;
-        }
+            if (o->type != OBJ_STRING)
+            {
+                addReply(c,shared.wrongtypeerr);
+                return ;
+            }
 
-        uint64_t u_version;
-        if (!version)
-        {
-            addReplyError(c, "invalid argv version");
-            return ;
-        }
-        if (getLongLongFromObjectOrReply(c, version, (long long *)&u_version, NULL) != C_OK) return ;
+            uint64_t u_version;
+            if (!version)
+            {
+                addReplyError(c, "invalid argv version");//if need print error?
+                return ;
+            }
+            if (getLongLongFromObjectOrReply(c, version, (long long *)&u_version, NULL) != C_OK) return ;
 
-        uint64_t old_u_version = 0;
-        if (tryObjectDecodeCAS(o, &old_u_version))
-        {
-            addReplyError(c, "value is not cas format");
-            return ;
-        }
-        if (u_version != old_u_version)
-        {
-            addReplyErrorFormat(c, "value's cas version = %llu, your version = %llu", old_u_version, u_version);
-            return ;
+            uint64_t old_u_version = 0;
+            if (tryObjectDecodeCAS(o, &old_u_version))
+            {
+                addReplyError(c, "value is not cas format");
+                return ;
+            }
+            if (u_version != old_u_version)
+            {
+                addReplyErrorFormat(c, "value's cas version = %lu", old_u_version);
+                return ;
+            }
         }
         //could delete.
         if (dbDelete(c->db, key)) {
