@@ -39,6 +39,7 @@ return version and value
 - setcas一个整数，然后RDB保存，重启server后查看这个kv是否可以正常CAS操作 `PASS`
 - setcas一个短字符串，然后RDB保存，重启server后查看这个kv是否可以正常CAS操作 `PASS`
 - setcas一个长字符串，然后RDB保存，重启server后查看这个kv是否可以正常CAS操作 `PASS`
+
 ###测试日记 2017.01.22
 
 >开发进度：基本实现，单机 + 不考虑集群、不考虑RDB\AOF、不考虑复制、不考虑订阅发布
