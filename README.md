@@ -8,8 +8,12 @@ Specifically, the API includes:
 - delcas
 
 ###FEATURE:
-- 对String类型的KV支持CAS操作
-- 兼容RDB持久化；
+- 对String类型的KV支持CAS操作 `DONE`
+- 兼容RDB持久化 `DONE`
+- 兼容AOF持久化 `DONE`
+- 支持主从复制 `TODO`
+- 兼容集群模式 `TODO`
+- 兼容发布订阅 `TODO`
 
 ###USAGE：
 ####getcas
