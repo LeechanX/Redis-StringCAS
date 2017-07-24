@@ -12,7 +12,7 @@ Specifically, the API includes:
 - 兼容RDB持久化 `DONE`
 - 兼容AOF持久化 `DONE`
 - 支持主从复制 `DONE`
-- 兼容集群模式 `TODO`
+- 兼容集群模式 `DONE`
 
 ### USAGE：
 #### getcas
